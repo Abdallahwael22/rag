@@ -9,7 +9,7 @@ class ResponseSignal(Enum):
     FILE_VALIDATION_FAILED = "File is not valid."
     PROCESSING_FAILED = "Failed to process the file."
     PROCESSING_SUCCESS = "File processed successfully."
-    
+    DELETING_CHUNKS_SUCCESS = "Chunks deleted successfully."
     
     
     

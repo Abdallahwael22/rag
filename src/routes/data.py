@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter ,Depends,UploadFile,status
+from fastapi import FastAPI, APIRouter ,Depends,UploadFile,status,Request
 # status is used to return appropriate HTTP status codes in the response
 # JSONResponse is used to return custom error messages with appropriate status codes
 from fastapi.responses import JSONResponse
@@ -9,21 +9,35 @@ from models import ResponseSignal
 import aiofiles
 import logging
 from .schemes.data import ProcessRequest
+from models import ProjectModel,ChunkModel
+from models.db_schemes import DataChunk
+   
 logger=logging.getLogger("uvicorn.error") # get the default uvicorn logger to log any errors that occur during file upload or processing
 data_router = APIRouter(
     prefix="/api/v1/data",
     tags=["api_v1","data"])
 
 @data_router.post("/upload/{project_id}")
-async def upload_file(project_id:str , file: UploadFile,app_settings: settings = Depends(get_settings)):
+async def upload_file(request: Request,project_id:str , file: UploadFile,app_settings: settings = Depends(get_settings)):
+    project_model=await ProjectModel.create_instance(db_client=request.app.db_client)
+    
+    # check if the project exists, if not, create it
+    project=await project_model.get_project_or_create_one(project_id=project_id)
+    
+    
     is_valid, message = DataController().validate_file(file=file)
+    
     if not is_valid:
         return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"is_valid": is_valid, "message": message})
     # get the project path to store the file
+    
     project_dir_path=ProjectController().get_project_path(project_id=project_id)
     # get the file uploaded path to store the file
+    
     # we generate a unique file name to avoid any conflicts with existing files in the project directory, we also clean the file name to remove any special characters that might cause issues with the file system
+    
     file_path,file_id=DataController().generate_unique_filepath(orig_fil_ename=file.filename,project_id=project_id)
+    
     # process the file by chuncks
     try:
         async with aiofiles.open(file_path,"wb") as f:
@@ -33,9 +47,12 @@ async def upload_file(project_id:str , file: UploadFile,app_settings: settings =
     except Exception as e:
         logger.error(f"Error saving file: {e}")
         return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"message": ResponseSignal.FILE_UPLOAD_FAILED.value})
-    return JSONResponse(content={"message":ResponseSignal.FILE_SUCCESSFULLY_UPLOADED.value,"file_id":file_id})
+    return JSONResponse(content={"message":ResponseSignal.FILE_SUCCESSFULLY_UPLOADED.value,
+                                 "file_id":file_id
+                                 })
+
 @data_router.post("/process/{project_id}")
-async def process_endpoint(project_id : str,proceess_request: ProcessRequest):
+async def process_endpoint(request: Request,project_id : str,proceess_request: ProcessRequest):
     file_id=proceess_request.file_id
     # we will intialize the ProcessController with the project id to process the file in the context of the project
     # this will allow us to access the project directory and the file path to process the file and generate the chunks
@@ -49,6 +66,14 @@ async def process_endpoint(project_id : str,proceess_request: ProcessRequest):
     
     overlap_size=proceess_request.overlap_size
     
+    do_reset=proceess_request.do_reset
+    
+    project_model=await ProjectModel.create_instance(db_client=request.app.db_client)
+    
+    project=await project_model.get_project_or_create_one(project_id=project_id)
+    
+  
+    
     if file_content is None:
         return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, 
                             content={"message": ResponseSignal.PROCESSING_FAILED.value})
@@ -61,6 +86,32 @@ async def process_endpoint(project_id : str,proceess_request: ProcessRequest):
     if chunks is None or len(chunks)==0:
         return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, 
                             content={"message": ResponseSignal.PROCESSING_FAILED.value})
-    else:
-        #return JSONResponse(content={"message": ResponseSignal.PROCESSING_SUCCESS.value,"chunks":[{"text":chunk.page_content,"metadata":chunk.metadata} for chunk in chunks]})
-        return chunks
+    
+    file_chunk_records=[
+        DataChunk(
+    chunk_text=chunk.page_content,
+    chunk_metadata=chunk.metadata,
+    chunk_order=i,
+    chunk_project_id=project.id           
+        )
+        for i,chunk in enumerate(chunks)
+    ]
+    
+    # we will insert the chunks into the database using the ChunkModel, 
+    # we will also check if the do_reset flag is set to True, if it is, 
+    # we will delete all the existing chunks for the project before inserting the new chunks, 
+    # this is useful when we want to reprocess a file and replace the existing chunks with the new ones.
+    # we applied this logic after checking if the file content is not None and the chunks are not empty.
+    
+    chunk_model=await ChunkModel.create_instance(db_client=request.app.db_client)
+    
+    if do_reset==1:
+        deleted_count=await chunk_model.delete_chunks_by_project_id(project_id=project.id)
+        logger.info(f"Deleted {deleted_count} chunks for project {project_id} due to reset flag being set to True.")
+   
+    
+    no_of_records=await chunk_model.insert_many_chunks(file_chunk_records)
+    
+    return JSONResponse(content={"message": ResponseSignal.PROCESSING_SUCCESS.value,
+                                 "number_of_chunks": no_of_records
+                                 })
