@@ -20,6 +20,7 @@ class CoHereProvider(LLMInterface):
         
         self.client = cohere.Client(api_key=self.api_key)
         
+        self.enums=CohereEnums
         self.logger = logging.getLogger(__name__)
         
         
@@ -51,11 +52,12 @@ class CoHereProvider(LLMInterface):
             response=self.client.chat(
                 model=self.generation_model_id,chat_history=chat_history,message=self.process_text(prompt),
                 temperature=temperature if temperature is not None else self.default_generation_temperature,
-                max_tokens=max_output_tokens if max_output_tokens is not None else self.default_generation_output
+                max_tokens=max_output_tokens if max_output_tokens is not None else self.default_generation_output_max_characters
                 )
             if not response or not response.text:
                 self.logger.error("No response from Cohere API.")
                 return None
+            return response.text
             
     def construct_prompt(self, prompt: str, role: str):
         return {"role": role, "text": self.process_text(prompt)}
