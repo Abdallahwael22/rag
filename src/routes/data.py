@@ -19,7 +19,7 @@ data_router = APIRouter(
     tags=["api_v1","data"])
 
 @data_router.post("/upload/{project_id}")
-async def upload_file(request: Request,project_id:str , file: UploadFile,app_settings: settings = Depends(get_settings)):
+async def upload_file(request: Request,project_id:int , file: UploadFile,app_settings: settings = Depends(get_settings)):
     project_model=await ProjectModel.create_instance(db_client=request.app.db_client)
     
     # check if the project exists, if not, create it
@@ -51,17 +51,16 @@ async def upload_file(request: Request,project_id:str , file: UploadFile,app_set
     asset_model=await AssetModel.create_instance(db_client=request.app.db_client)
     asset_resource=Asset(
         asset_name=file_id,
-        asset_path=file_path,
-        asset_project_id=project.id,
+        asset_project_id=project.project_id,
         asset_type=AssetTypeEnum.FILE.value,
         asset_size=os.path.getsize(file_path)
     )
     asset_record= await asset_model.create_asset(asset=asset_resource)
-    return JSONResponse(content={"message":str(asset_record.id)
+    return JSONResponse(content={"message": ResponseSignal.FILE_SUCCESSFULLY_UPLOADED.value,"file_id":str(asset_record.asset_id,)
                                  })
 
 @data_router.post("/process/{project_id}")
-async def process_endpoint(request: Request,project_id : str,proceess_request: ProcessRequest):
+async def process_endpoint(request: Request,project_id : int,proceess_request: ProcessRequest):
     # we will intialize the ProcessController with the project id to process the file in the context of the project
     # this will allow us to access the project directory and the file path to process the file and generate the chunks
     
@@ -83,17 +82,17 @@ async def process_endpoint(request: Request,project_id : str,proceess_request: P
     project_files_ids={}
     
     if proceess_request.file_id:
-        asset_record=await asset_model.get_asset_record(asset_project_id=project.id,asset_name=proceess_request.file_id)
+        asset_record=await asset_model.get_asset_record(asset_project_id=project.project_id,asset_name=proceess_request.file_id)
        
         if asset_record is None:
             return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST,
                   content={"message": ResponseSignal.FILE_ID_ERROR.value,
                                  })
-        project_files_ids={asset_record.id:asset_record.asset_name}
+        project_files_ids={asset_record.asset_id:asset_record.asset_name}
     else:
         
-        project_assets=await asset_model.get_all_project_assets(asset_project_id=project.id,asset_type=AssetTypeEnum.FILE.value)
-        project_files_ids={asset.id:asset.asset_name for asset in project_assets}
+        project_assets=await asset_model.get_all_project_assets(asset_project_id=project.project_id,asset_type=AssetTypeEnum.FILE.value)
+        project_files_ids={asset.asset_id:asset.asset_name for asset in project_assets}
     
     if len(project_files_ids)==0:
               return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST,
@@ -105,7 +104,7 @@ async def process_endpoint(request: Request,project_id : str,proceess_request: P
     no_of_files=0
     chunk_model=await ChunkModel.create_instance(db_client=request.app.db_client)
     if do_reset==1:
-            deleted_count=await chunk_model.delete_chunks_by_project_id(project_id=project.id)
+            deleted_count=await chunk_model.delete_chunks_by_project_id(project_id=project.project_id)
             logger.info(f"Deleted {deleted_count} chunks for project {project_id} due to reset flag being set to True.")
     
     for asset_id,file_id in project_files_ids.items():
@@ -128,7 +127,7 @@ async def process_endpoint(request: Request,project_id : str,proceess_request: P
         chunk_text=chunk.page_content,
         chunk_metadata=chunk.metadata,
         chunk_order=i,
-        chunk_project_id=project.id,
+        chunk_project_id=project.project_id,
         chunk_asset_id=asset_id           
             )
             for i,chunk in enumerate(chunks)
