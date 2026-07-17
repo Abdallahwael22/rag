@@ -6,3 +6,12 @@ pydantic-settings==2.2.1
 aiofiles==23.2.1
 langchain==0.1.20
 PyMuPDF==1.24.3
+Motor==3.4.0
+openai==1.55.3
+cohere==4.57.0
+qdrant-client==1.10.1
+pymongo==4.7.0
+SQLALchemy==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+psycopg2==2.9.10

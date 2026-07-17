@@ -1,0 +1,41 @@
+# Use this file to define your application's services, networks and volumes.
+services:
+#first service
+  mongodb:
+  #the image to use for the mongodb service
+    image: mongo:latest
+    container_name: mongodb
+    # container name to access the container running on mongodb
+    ports:
+      - "27017:27017"
+    # ports to expose the mongodb service
+    volumes:
+      - mongo_data:/data/db
+    # volumes to persist the data of the mongodb service
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    networks:
+      - backend
+    restart: always
+    
+  pgvector:
+      image: pgvector/pgvector:0.8.0-pg17
+      container_name: pgvector
+      ports:
+        - "5432:5432"
+      volumes:
+        - pgvector_data:/var/lib/postgresql/data
+      environment:
+        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      networks:
+        - backend
+      restart: always
+
+    
+networks:
+  backend:
+
+volumes:
+  mongo_data: 
+  pgvector_data:

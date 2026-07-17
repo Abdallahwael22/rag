@@ -9,7 +9,13 @@ class ResponseSignal(Enum):
     FILE_VALIDATION_FAILED = "File is not valid."
     PROCESSING_FAILED = "Failed to process the file."
     PROCESSING_SUCCESS = "File processed successfully."
-    
-    
-    
-    
+    DELETING_CHUNKS_SUCCESS = "Chunks deleted successfully."
+    FILE_NOT_FOUND = "File not found."
+    FILE_ID_ERROR = "File ID is not valid."
+    INSERT_INTO_VECTORDB_ERROR="insert into vectordb error"
+    INSERT_INTO_VECTORDB_SUCCESS="insert into vectordb successs"
+    VECTORDB_COLLECTION_RETRIEVED="vectordb collection retrieved successfully"
+    VECTOR_SEARCH_ERROR="Vector search error"
+    VECTOR_SEARCH_SUCCESS="vector search success"
+    RAG_ANSWER_ERROR="rag_answer_error"
+    RAG_ANSWER_SUCCESS="rag_answer_success"
