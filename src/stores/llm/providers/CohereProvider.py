@@ -50,7 +50,7 @@ class CoHereProvider(LLMInterface):
                 return None
             
             response=self.client.chat(
-                model=self.generation_model_id,chat_history=chat_history,message=self.process_text(prompt),
+                model=self.generation_model_id,chat_history=chat_history,message=prompt,
                 temperature=temperature if temperature is not None else self.default_generation_temperature,
                 max_tokens=max_output_tokens if max_output_tokens is not None else self.default_generation_output_max_characters
                 )

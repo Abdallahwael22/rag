@@ -51,13 +51,12 @@ async def upload_file(request: Request,project_id:int , file: UploadFile,app_set
     asset_model=await AssetModel.create_instance(db_client=request.app.db_client)
     asset_resource=Asset(
         asset_name=file_id,
-        asset_path=file_path,
         asset_project_id=project.project_id,
         asset_type=AssetTypeEnum.FILE.value,
         asset_size=os.path.getsize(file_path)
     )
     asset_record= await asset_model.create_asset(asset=asset_resource)
-    return JSONResponse(content={"message":str(asset_record.asset_id)
+    return JSONResponse(content={"message": ResponseSignal.FILE_SUCCESSFULLY_UPLOADED.value,"file_id":str(asset_record.asset_id,)
                                  })
 
 @data_router.post("/process/{project_id}")
@@ -93,7 +92,7 @@ async def process_endpoint(request: Request,project_id : int,proceess_request: P
     else:
         
         project_assets=await asset_model.get_all_project_assets(asset_project_id=project.project_id,asset_type=AssetTypeEnum.FILE.value)
-        project_files_ids={asset.asset_project_id:asset.asset_name for asset in project_assets}
+        project_files_ids={asset.asset_id:asset.asset_name for asset in project_assets}
     
     if len(project_files_ids)==0:
               return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST,
@@ -128,7 +127,7 @@ async def process_endpoint(request: Request,project_id : int,proceess_request: P
         chunk_text=chunk.page_content,
         chunk_metadata=chunk.metadata,
         chunk_order=i,
-        chunk_project_id=project.id,
+        chunk_project_id=project.project_id,
         chunk_asset_id=asset_id           
             )
             for i,chunk in enumerate(chunks)
