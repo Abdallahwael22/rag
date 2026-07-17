@@ -62,50 +62,15 @@ On Windows PowerShell, activate it with:
 
 ### 3. Configure the application
 
-Create `src/.env` and add the following values. The example uses OpenAI for both generation and embeddings; replace the key and model settings if using Cohere.
+Copy the template environment file to create your runtime configuration:
 
-```dotenv
-APP_NAME=mini-rag
-APP_VERSION=1.0.0
-
-# Upload limits
-FILE_ALLOWED_TYPES=["text/plain","application/pdf"]
-FILE_MAX_SIZE=10
-FILE_DEFAULT_CHUNK_SIZE=1048576
-
-# PostgreSQL
-POSTGRES_USERNAME=postgres
-POSTGRES_PASSWORD=your-postgres-password
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_MAIN_DATABASE=postgres
-
-# Providers: OPENAI or COHERE
-GENERATION_BACKEND=OPENAI
-EMBEDDING_BACKEND=OPENAI
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_API_URL=
-GENERATION_MODEL_ID=gpt-4o-mini
-EMBEDDING_MODEL_ID=text-embedding-3-small
-EMBEDDING_MODEL_SIZE=1536
-
-# Used when either provider is Cohere
-COHERE_API_KEY=
-
-# Generation controls
-INPUT_DEFAULT_MAX_TOKENS=1000
-GENERATION_DEFAULT_MAX_TOKENS=500
-GENERATION_DEFAULT_TEMPERATURE=0.1
-
-# Vector database
-VECTOR_DB_BACKEND=QDRANT
-VECTOR_DB_PATH=qdrant
-VECTOR_DB_DISTANCE_METHOD=Cosine
-
-# RAG prompt locale
-PRIMARY_LANG=en
-DEFAULT_LANG=en
+```Bash
+cp src/.env.example src/.env
 ```
+Open src/.env and update the values to match your local setup (e.g., database credentials, provider API keys, and model selections).
+
+## IMPORTANT
+If you switch between OpenAI and Cohere, make sure to update both BACKEND variables and verify that EMBEDDING_MODEL_SIZE exactly matches your chosen embedding model's vector dimensions.
 
 For Cohere, set both backends to `COHERE`, set `COHERE_API_KEY`, and use compatible generation and embedding model IDs. Ensure `EMBEDDING_MODEL_SIZE` matches the selected embedding model's vector dimension.
 
