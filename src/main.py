@@ -10,8 +10,10 @@ from stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
 from stores.llm.templates.template_parser import TemplateParser
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-
+from utils.metrics import setup_metrics
 app=FastAPI()
+
+setup_metrics(app)
 # we will use the startup event to initialize the database connection when the application starts
 # and the shutdown event to close the database connection when the application shuts down
 # this ensures that we have a persistent connection to the database throughout the lifecycle of the application 
