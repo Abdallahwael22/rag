@@ -12,7 +12,7 @@ from .schemes.data import ProcessRequest
 from models import ProjectModel,ChunkModel,AssetModel
 from models.db_schemes import DataChunk,Asset
 from models.enums import AssetTypeEnum
-   
+from controllers import NLPController
 logger=logging.getLogger("uvicorn.error") # get the default uvicorn logger to log any errors that occur during file upload or processing
 data_router = APIRouter(
     prefix="/api/v1/data",
@@ -79,6 +79,14 @@ async def process_endpoint(request: Request,project_id : int,proceess_request: P
     
     project=await project_model.get_project_or_create_one(project_id=project_id)
     asset_model=await AssetModel.create_instance(db_client=request.app.db_client)
+    
+    nlp_controller = NLPController(
+        vectordb_client=request.app.vectordb_client,
+        generation_client=request.app.generation_client,
+        embedding_client=request.app.embedding_client,
+        template_parser=request.app.template_parser,
+    )
+    
     project_files_ids={}
     
     if proceess_request.file_id:
@@ -104,6 +112,11 @@ async def process_endpoint(request: Request,project_id : int,proceess_request: P
     no_of_files=0
     chunk_model=await ChunkModel.create_instance(db_client=request.app.db_client)
     if do_reset==1:
+            
+            collection_name = nlp_controller.create_collection_name(project_id=project.project_id)
+            
+            _ = await request.app.vectordb_client.delete_collection(collection_name=collection_name)
+            
             deleted_count=await chunk_model.delete_chunks_by_project_id(project_id=project.project_id)
             logger.info(f"Deleted {deleted_count} chunks for project {project_id} due to reset flag being set to True.")
     

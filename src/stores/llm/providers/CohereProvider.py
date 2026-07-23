@@ -1,5 +1,5 @@
 from urllib import response
-
+from typing import List,Union
 from ..LLMinterface import LLMInterface
 from ..LLMEnums import CohereEnums,DocumentType
 import cohere
@@ -62,10 +62,13 @@ class CoHereProvider(LLMInterface):
     def construct_prompt(self, prompt: str, role: str):
         return {"role": role, "text": self.process_text(prompt)}
         
-    def embed_text(self, text: str,document_type:str=None):
+    def embed_text(self, text:Union[str,List[str]],document_type:str=None):
         if not self.client:
             self.logger.error("Cohere client is not initialized.")
             return None
+        if isinstance(text,str):
+            text=[text]
+        
         if self.embedding_model_id is None:
             self.logger.error("Embedding model is not set.")
             return None
@@ -76,7 +79,7 @@ class CoHereProvider(LLMInterface):
             input_type=DocumentType.QUERY.value
         response=self.client.embed(
             model=self.embedding_model_id,
-            texts=[self.process_text(text)],
+            texts=[self.process_text(t) for t in text ],
             input_type=input_type,
             embedding_types=["float"]
             )
@@ -99,4 +102,4 @@ class CoHereProvider(LLMInterface):
             return None
             
         # Return the 1D vector of the first (and only) text we passed in
-        return float_embeddings[0]
+        return [f for f in float_embeddings]
