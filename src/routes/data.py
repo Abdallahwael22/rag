@@ -13,6 +13,8 @@ from models import ProjectModel,ChunkModel,AssetModel
 from models.db_schemes import DataChunk,Asset
 from models.enums import AssetTypeEnum
 from controllers import NLPController
+from tasks.file_processing import process_project_files
+
 logger=logging.getLogger("uvicorn.error") # get the default uvicorn logger to log any errors that occur during file upload or processing
 data_router = APIRouter(
     prefix="/api/v1/data",
@@ -74,6 +76,17 @@ async def process_endpoint(request: Request,project_id : int,proceess_request: P
     overlap_size=proceess_request.overlap_size
     
     do_reset=proceess_request.do_reset
+    
+    
+    task=process_project_files.delay(
+        project_id=project_id,
+        file_id=proceess_request.file_id,
+        chunk_size=chunk_size,
+        overlap_size=overlap_size,
+        do_reset=do_reset
+        )
+    
+    return JSONResponse (content={"signal":ResponseSignal.PROCESSING_SUCCESS.value,"task_id":task.id})
     
     project_model=await ProjectModel.create_instance(db_client=request.app.db_client)
     
